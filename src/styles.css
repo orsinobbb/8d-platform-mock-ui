@@ -10,12 +10,12 @@ body {
 }
 
 .app-root {
-  max-width: 960px;
+  max-width: 1040px;
   margin: 24px auto;
   padding: 16px 16px 32px;
   border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.4);
-  background: radial-gradient(circle at top, rgba(56, 189, 248, 0.25), transparent 60%),
+  background: radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 60%),
     #020617;
 }
 
@@ -53,6 +53,50 @@ body {
   background: rgba(15, 23, 42, 0.85);
 }
 
+.panel-desc {
+  margin-top: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.issue-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.issue-table th,
+.issue-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.9);
+}
+
+.issue-table th {
+  text-align: left;
+  font-weight: 600;
+  color: #e5e7eb;
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.issue-table tbody tr:hover {
+  background: rgba(30, 64, 175, 0.3);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  font-size: 12px;
+}
+
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
@@ -60,4 +104,12 @@ code {
   padding: 2px 6px;
   border-radius: 6px;
   border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+ol {
+  padding-left: 20px;
+}
+
+ol li {
+  margin-bottom: 4px;
 }
