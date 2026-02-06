@@ -403,6 +403,8 @@
     } else if(vmCur===0){
       msgEl.textContent = current===BLACK ? '黑棋無合法步，輪到白棋。' : '白棋無合法步，輪到黑棋。';
       current = opponent(current);
+      // 換手後重新渲染一次，避免狀態與畫面不同步
+      return render();
     }
 
     // moves list
