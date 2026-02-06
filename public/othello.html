@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>黑白棋 Othello - 純前端 Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #0b1120;
+      --grid: #1e293b;
+      --accent: #22c55e;
+      --accent2: #38bdf8;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, rgba(56,189,248,0.12), transparent 60%), var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .app-root {
+      max-width: 960px;
+      width: 100%;
+      padding: 20px 16px 32px;
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      padding: 16px 18px 20px;
+      box-shadow: 0 18px 45px rgba(15,23,42,0.6);
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .subtitle {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(52,211,153,0.7);
+      color: #bbf7d0;
+      background: rgba(22,163,74,0.18);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 16px;
+    }
+    @media (max-width: 840px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    .board-wrapper {
+      display: flex;
+      justify-content: center;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 40px);
+      grid-template-rows: repeat(8, 40px);
+      gap: 2px;
+      padding: 6px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top, rgba(74,222,128,0.24), rgba(22,163,74,0.85));
+      box-shadow: 0 10px 25px rgba(15,23,42,0.9);
+    }
+    @media (max-width: 480px) {
+      .board {
+        grid-template-columns: repeat(8, 32px);
+        grid-template-rows: repeat(8, 32px);
+      }
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle at top, #1f2937, #020617);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.15s ease-out, transform 0.08s ease-out;
+    }
+    @media (max-width: 480px) {
+      .cell { width: 32px; height: 32px; }
+    }
+    .cell:hover { background: #0f172a; transform: translateY(-1px); }
+    .cell.disabled { cursor: default; opacity: 0.3; transform: none; }
+    .disc {
+      position: absolute;
+      inset: 5px;
+      border-radius: 999px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+      background: #e5e7eb;
+      background-image: radial-gradient(circle at 25% 20%, #f9fafb, #9ca3af);
+      transform-origin: center;
+      transition: transform 0.18s ease-out, background 0.18s ease-out;
+    }
+    @media (max-width: 480px) {
+      .disc { inset: 4px; }
+    }
+    .disc.black {
+      background: #020617;
+      background-image: radial-gradient(circle at 25% 18%, #6b7280, #020617 70%);
+    }
+    .disc.flip {
+      transform: rotateY(180deg);
+    }
+    .hint {
+      position: absolute;
+      inset: 12px;
+      border-radius: 999px;
+      border: 2px dashed rgba(248,250,252,0.6);
+      box-shadow: 0 0 0 1px rgba(15,23,42,0.7);
+      pointer-events: none;
+    }
+    @media (max-width: 480px) {
+      .hint { inset: 9px; }
+    }
+    .status {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .status .pill {
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.9);
+    }
+    .status .turn-black { border-color: rgba(248,250,252,0.7); }
+    .status .turn-black .dot { background: #020617; }
+    .status .turn-white { border-color: rgba(248,250,252,0.7); }
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-right: 4px;
+      background: #e5e7eb;
+    }
+    .dot.black {
+      background: #020617;
+    }
+    .panel-right {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.4);
+      padding: 12px 14px;
+      background: radial-gradient(circle at top, rgba(56,189,248,0.12), rgba(15,23,42,0.96));
+    }
+    .panel-right h2 {
+      font-size: 14px;
+      margin: 0 0 8px;
+    }
+    .panel-right p {
+      font-size: 13px;
+      margin: 4px 0;
+      color: var(--muted);
+    }
+    .btn-row {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    button.ctrl {
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.95);
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 9px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    button.ctrl.primary {
+      border-color: rgba(34,197,94,0.9);
+      background: rgba(22,163,74,0.9);
+      color: #ecfdf5;
+    }
+    button.ctrl:disabled { opacity: 0.5; cursor: default; }
+    ul.moves {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      max-height: 160px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    ul.moves li {
+      padding: 3px 0;
+      color: var(--muted);
+    }
+    .coord { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+<div class="app-root">
+  <div class="card">
+    <h1>
+      黑白棋 Othello
+      <span class="badge">純前端 Demo（本機運算）</span>
+    </h1>
+    <p class="subtitle">在這個頁面就可以兩人對弈，所有狀態只存在瀏覽器記憶體，不會寫入任何後端。</p>
+
+    <div class="layout">
+      <div class="board-wrapper">
+        <div class="board" id="board"></div>
+      </div>
+
+      <div class="panel-right">
+        <h2>對局資訊</h2>
+        <div class="status" id="status"></div>
+        <div class="btn-row">
+          <button class="ctrl primary" id="btnNew">重新開始</button>
+          <button class="ctrl" id="btnUndo">悔棋一步</button>
+          <button class="ctrl" id="btnHints">切換可下提示</button>
+        </div>
+        <p id="msg"></p>
+
+        <h2 style="margin-top:12px;">走步記錄</h2>
+        <ul class="moves" id="moves"></ul>
+        <p style="margin-top:10px; font-size:11px;" class="muted">
+          座標格式例如 <span class="coord">D3</span>：橫列從上到下 1–8，直行從左到右 A–H。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SIZE = 8;
+  const EMPTY = 0, BLACK = 1, WHITE = 2;
+
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const msgEl = document.getElementById('msg');
+  const movesEl = document.getElementById('moves');
+  const btnNew = document.getElementById('btnNew');
+  const btnUndo = document.getElementById('btnUndo');
+  const btnHints = document.getElementById('btnHints');
+
+  let board, current, history, showHints;
+
+  function newBoard() {
+    board = Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
+    const m = SIZE / 2;
+    board[m-1][m-1] = WHITE;
+    board[m][m] = WHITE;
+    board[m-1][m] = BLACK;
+    board[m][m-1] = BLACK;
+    current = BLACK;
+    history = [];
+    showHints = true;
+    render();
+  }
+
+  const dirs = [
+    [-1,-1],[-1,0],[-1,1],
+    [0,-1],        [0,1],
+    [1,-1],[1,0],[1,1]
+  ];
+
+  function inside(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+
+  function opponent(p){ return p===BLACK?WHITE:BLACK; }
+
+  function getFlips(r,c,player){
+    if(board[r][c]!==EMPTY) return [];
+    const opp = opponent(player);
+    let flips = [];
+    for(const [dr,dc] of dirs){
+      let line = [];
+      let rr = r+dr, cc = c+dc;
+      while(inside(rr,cc) && board[rr][cc]===opp){
+        line.push([rr,cc]);
+        rr += dr; cc += dc;
+      }
+      if(line.length && inside(rr,cc) && board[rr][cc]===player){
+        flips = flips.concat(line);
+      }
+    }
+    return flips;
+  }
+
+  function validMoves(player){
+    const moves = [];
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const f = getFlips(r,c,player);
+        if(f.length) moves.push({r,c,flips:f});
+      }
+    }
+    return moves;
+  }
+
+  function coord(r,c){
+    return String.fromCharCode('A'.charCodeAt(0)+c) + (r+1);
+  }
+
+  function applyMove(r,c,player,flips){
+    history.push({
+      board: board.map(row=>row.slice()),
+      current,
+      msg: msgEl.textContent
+    });
+    board[r][c] = player;
+    for(const [rr,cc] of flips){ board[rr][cc] = player; }
+    current = opponent(player);
+  }
+
+  function countPieces(){
+    let b=0,w=0;
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        if(board[r][c]===BLACK) b++;
+        else if(board[r][c]===WHITE) w++;
+      }
+    }
+    return {b,w};
+  }
+
+  function render(){
+    const moves = validMoves(current);
+    const moveMap = new Map();
+    for(const m of moves){ moveMap.set(m.r+','+m.c,m.flips); }
+
+    boardEl.innerHTML = '';
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        const key = r+','+c;
+        const isPlayable = moveMap.has(key);
+        if(!isPlayable && !showHints) cell.classList.add('disabled');
+        cell.onclick = () => {
+          if(!moveMap.has(key)) return;
+          const flips = moveMap.get(key);
+          applyMove(r,c,current,flips);
+          render();
+        };
+        if(board[r][c]!==EMPTY){
+          const disc = document.createElement('div');
+          disc.className = 'disc ' + (board[r][c]===BLACK?'black':'white');
+          cell.appendChild(disc);
+        } else if(showHints && isPlayable){
+          const h = document.createElement('div');
+          h.className = 'hint';
+          cell.appendChild(h);
+        }
+        boardEl.appendChild(cell);
+      }
+    }
+
+    const {b,w} = countPieces();
+    const vmCur = moves.length;
+    const vmOpp = validMoves(opponent(current)).length;
+
+    statusEl.innerHTML = '';
+    const pillTurn = document.createElement('div');
+    pillTurn.className = 'pill ' + (current===BLACK?'turn-black':'turn-white');
+    const dot = document.createElement('span');
+    dot.className = 'dot ' + (current===BLACK?'black':'white');
+    pillTurn.appendChild(dot);
+    pillTurn.appendChild(document.createTextNode(current===BLACK?' 黑棋回合':' 白棋回合'));
+
+    const pillScore = document.createElement('div');
+    pillScore.className = 'pill';
+    pillScore.textContent = `黑棋 ${b} 子  vs  白棋 ${w} 子`;
+
+    const pillMoves = document.createElement('div');
+    pillMoves.className = 'pill';
+    pillMoves.textContent = `可下位置：目前 ${vmCur} 手，對手 ${vmOpp} 手`;
+
+    statusEl.appendChild(pillTurn);
+    statusEl.appendChild(pillScore);
+    statusEl.appendChild(pillMoves);
+
+    msgEl.textContent = '';
+    if(vmCur===0 && vmOpp===0){
+      if(b>w) msgEl.textContent = '對局結束：黑棋獲勝。';
+      else if(w>b) msgEl.textContent = '對局結束：白棋獲勝。';
+      else msgEl.textContent = '對局結束：平手。';
+    } else if(vmCur===0){
+      msgEl.textContent = current===BLACK ? '黑棋無合法步，輪到白棋。' : '白棋無合法步，輪到黑棋。';
+      current = opponent(current);
+    }
+
+    // moves list
+    movesEl.innerHTML = '';
+    history.forEach((h,i)=>{
+      const li = document.createElement('li');
+      li.textContent = `第 ${i+1} 手`;
+      movesEl.appendChild(li);
+    });
+
+    btnUndo.disabled = history.length===0;
+  }
+
+  btnNew.onclick = () => {
+    newBoard();
+  };
+
+  btnUndo.onclick = () => {
+    if(!history.length) return;
+    const last = history.pop();
+    board = last.board.map(row=>row.slice());
+    current = last.current;
+    msgEl.textContent = last.msg || '';
+    render();
+  };
+
+  btnHints.onclick = () => {
+    showHints = !showHints;
+    btnHints.textContent = showHints ? '關閉可下提示' : '開啟可下提示';
+    render();
+  };
+
+  newBoard();
+})();
+</script>
+
+</body>
+</html>
