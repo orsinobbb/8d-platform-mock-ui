@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import D2IssueForm from './D2IssueForm'
 
 const MOCK_ISSUES = [
   {
@@ -18,6 +19,8 @@ const MOCK_ISSUES = [
 ]
 
 function App() {
+  const [activeTab, setActiveTab] = useState('list')
+
   return (
     <div className="app-root">
       <header className="app-header">
@@ -27,51 +30,72 @@ function App() {
         </p>
       </header>
 
+      <div className="tabs">
+        <button
+          className={activeTab === 'list' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('list')}
+        >
+          總覽列表
+        </button>
+        <button
+          className={activeTab === 'd2' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('d2')}
+        >
+          D2 問題回報
+        </button>
+      </div>
+
       <main className="app-main">
-        <section className="panel">
-          <h2>8D 問題單列表（示意資料）</h2>
-          <p className="panel-desc">這裡先用假資料模擬之後的列表畫面與欄位結構。</p>
+        {activeTab === 'list' && (
+          <>
+            <section className="panel">
+              <h2>8D 問題單列表（示意資料）</h2>
+              <p className="panel-desc">這裡先用假資料模擬之後的列表畫面與欄位結構。</p>
 
-          <div className="table-wrapper">
-            <table className="issue-table">
-              <thead>
-                <tr>
-                  <th>8D 編號</th>
-                  <th>機種 Model</th>
-                  <th>客戶</th>
-                  <th>問題點</th>
-                  <th>狀態</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_ISSUES.map((issue) => (
-                  <tr key={issue.id}>
-                    <td>{issue.id}</td>
-                    <td>{issue.model}</td>
-                    <td>{issue.customer}</td>
-                    <td>{issue.title}</td>
-                    <td>
-                      <span className="status-pill">{issue.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              <div className="table-wrapper">
+                <table className="issue-table">
+                  <thead>
+                    <tr>
+                      <th>8D 編號</th>
+                      <th>機種 Model</th>
+                      <th>客戶</th>
+                      <th>問題點</th>
+                      <th>狀態</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {MOCK_ISSUES.map((issue) => (
+                      <tr key={issue.id}>
+                        <td>{issue.id}</td>
+                        <td>{issue.model}</td>
+                        <td>{issue.customer}</td>
+                        <td>{issue.title}</td>
+                        <td>
+                          <span className="status-pill">{issue.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-        <section className="panel muted">
-          <h3>接下來要補上的功能</h3>
-          <ol>
-            <li>可以新增 / 編輯 / 刪除 8D 問題單（而不是只有假資料）。</li>
-            <li>將 8D 問題單儲存在 localStorage 中。</li>
-            <li>支援將所有案件匯出成 JSON 檔，以及從 JSON 匯入。</li>
-          </ol>
-          <p>
-            你現在看到的是「前端 UI + GitHub Pages + GitHub Actions」的最小整合版本，之後會逐步把
-            8D 流程與 .NET 後端接上。
-          </p>
-        </section>
+            <section className="panel muted">
+              <h3>接下來要補上的功能</h3>
+              <ol>
+                <li>可以新增 / 編輯 / 刪除 8D 問題單（而不是只有假資料）。</li>
+                <li>將 8D 問題單儲存在 localStorage 中。</li>
+                <li>支援將所有案件匯出成 JSON 檔，以及從 JSON 匯入。</li>
+              </ol>
+              <p>
+                你現在看到的是「前端 UI + GitHub Pages + GitHub Actions」的最小整合版本，之後會逐步把
+                8D 流程與 .NET 後端接上。
+              </p>
+            </section>
+          </>
+        )}
+
+        {activeTab === 'd2' && <D2IssueForm />}
       </main>
     </div>
   )
