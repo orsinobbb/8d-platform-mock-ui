@@ -57,6 +57,17 @@ export default function D2IssueForm() {
     d3_containment_owner_emp_id: '',
     d3_containment_effective_flag: false,
   })
+  const [d4List, setD4List] = useState([])
+  const [d4Draft, setD4Draft] = useState({
+    root_cause_category: '',
+    root_cause_code: '',
+    root_cause_desc: '',
+    is_primary: false,
+    status: 'hypothesis',
+    escape_point_process_code: '',
+    escape_reason_code: '',
+    escape_reason_desc: '',
+  })
 
   useEffect(() => {
     try {
@@ -126,6 +137,11 @@ export default function D2IssueForm() {
         d3_containment_effective_flag: false,
       })
     }
+    if (target && Array.isArray(target.d4_root_causes)) {
+      setD4List(target.d4_root_causes)
+    } else {
+      setD4List([])
+    }
   }
 
   const saveD3 = () => {
@@ -149,6 +165,56 @@ export default function D2IssueForm() {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       return next
     })
+  }
+
+  const handleD4DraftChange = (field) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    setD4Draft((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const addD4Cause = () => {
+    if (!activeIssueId) return
+    const trimmedDesc = (d4Draft.root_cause_desc || '').trim()
+    if (!trimmedDesc) return
+    const entry = {
+      ...d4Draft,
+      id: `${activeIssueId}-RC-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    }
+    const nextD4List = [entry, ...d4List]
+    setD4List(nextD4List)
+    setD4Draft({
+      root_cause_category: '',
+      root_cause_code: '',
+      root_cause_desc: '',
+      is_primary: false,
+      status: 'hypothesis',
+      escape_point_process_code: '',
+      escape_reason_code: '',
+      escape_reason_desc: '',
+    })
+    // 同步寫回 active issue 的 d4_root_causes
+    setList((prev) => {
+      const next = prev.map((item) =>
+        item.id === activeIssueId ? { ...item, d4_root_causes: nextD4List } : item,
+      )
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const removeD4Cause = (id) => {
+    const nextD4List = d4List.filter((x) => x.id !== id)
+    setD4List(nextD4List)
+    if (activeIssueId) {
+      setList((prev) => {
+        const next = prev.map((item) =>
+          item.id === activeIssueId ? { ...item, d4_root_causes: nextD4List } : item,
+        )
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+        return next
+      })
+    }
   }
 
   return (
@@ -527,6 +593,157 @@ export default function D2IssueForm() {
               </ul>
             ) : (
               <p className="panel-desc">目前尚無歷史版本，儲存一次 D3 後會保留舊版本。</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeIssueId && (
+        <section className="panel muted d3-panel">
+          <h3>D4 根本原因分析 - {activeIssueId}</h3>
+          <div className="d3-form">
+            <div className="d2-row">
+              <div className="field">
+                <label>原因大分類</label>
+                <select
+                  value={d4Draft.root_cause_category}
+                  onChange={handleD4DraftChange('root_cause_category')}
+                >
+                  <option value="">請選擇</option>
+                  <option value="design">設計</option>
+                  <option value="material">材料</option>
+                  <option value="machine">設備</option>
+                  <option value="method">方法 / 作業</option>
+                  <option value="man">人員</option>
+                  <option value="environment">環境</option>
+                  <option value="measurement">測試 / 量測</option>
+                  <option value="supplier">供應商</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>原因代碼</label>
+                <input
+                  type="text"
+                  value={d4Draft.root_cause_code}
+                  onChange={handleD4DraftChange('root_cause_code')}
+                  placeholder="例如：MOLD_TEMP_LOW / TOOL_WEAR"
+                />
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field full">
+                <label>原因說明</label>
+                <textarea
+                  rows={3}
+                  value={d4Draft.root_cause_desc}
+                  onChange={handleD4DraftChange('root_cause_desc')}
+                  placeholder="描述此 root cause 的內容，例如模具溫度控制不足導致充填不良。"
+                />
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field">
+                <label>狀態 / 是否主要原因</label>
+                <div className="checkbox-row">
+                  <select
+                    value={d4Draft.status}
+                    onChange={handleD4DraftChange('status')}
+                  >
+                    <option value="hypothesis">假設中</option>
+                    <option value="confirmed">已確認</option>
+                    <option value="rejected">已否決</option>
+                  </select>
+                  <label className="checkbox-inline">
+                    <input
+                      type="checkbox"
+                      checked={d4Draft.is_primary}
+                      onChange={handleD4DraftChange('is_primary')}
+                    />
+                    主要原因
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field">
+                <label>應攔截製程段</label>
+                <select
+                  value={d4Draft.escape_point_process_code}
+                  onChange={handleD4DraftChange('escape_point_process_code')}
+                >
+                  <option value="">請選擇</option>
+                  {ROUTES.filter((r) => r.code).map((r) => (
+                    <option key={r.code} value={r.code}>
+                      {r.name} ({r.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>漏檢原因代碼</label>
+                <input
+                  type="text"
+                  value={d4Draft.escape_reason_code}
+                  onChange={handleD4DraftChange('escape_reason_code')}
+                  placeholder="例如：NO_CHECKPOINT / CHECK_NOT_EFFECTIVE"
+                />
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field full">
+                <label>漏檢原因說明</label>
+                <textarea
+                  rows={2}
+                  value={d4Draft.escape_reason_desc}
+                  onChange={handleD4DraftChange('escape_reason_desc')}
+                  placeholder="描述為何沒被攔住，例如檢驗頻率不足、未涵蓋此情境。"
+                />
+              </div>
+            </div>
+
+            <div className="d2-actions">
+              <button type="button" className="btn primary" onClick={addD4Cause}>
+                新增 D4 根本原因
+              </button>
+            </div>
+          </div>
+
+          <div className="d3-history">
+            <h4>D4 原因清單</h4>
+            {d4List.length ? (
+              <ul className="d3-history-list">
+                {d4List.map((rc) => (
+                  <li key={rc.id}>
+                    <div>
+                      <strong>
+                        {rc.root_cause_category || '（未選分類）'} /{' '}
+                        {rc.root_cause_code || '（未填代碼）'}
+                      </strong>
+                      <span className="d3-history-meta">
+                        ｜ 狀態：{rc.status}｜ 主要：{rc.is_primary ? '是' : '否'}
+                      </span>
+                    </div>
+                    {rc.root_cause_desc && <div>{rc.root_cause_desc}</div>}
+                    <div className="d3-history-meta">
+                      應攔截製程：{rc.escape_point_process_code || '（未填）'}；漏檢原因：
+                      {rc.escape_reason_code || '（未填）'}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      onClick={() => removeD4Cause(rc.id)}
+                    >
+                      刪除此原因
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="panel-desc">尚未新增任何根本原因，請從上方表單新增。</p>
             )}
           </div>
         </section>
