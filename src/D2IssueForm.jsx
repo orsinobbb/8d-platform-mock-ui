@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-const STORAGE_KEY = 'd2_issues_v1'
+const STORAGE_KEY = 'd2_issues_v2'
 
 const initialForm = {
   customer_name: '',
@@ -49,6 +49,14 @@ function calcRate(numerator, denominator) {
 export default function D2IssueForm() {
   const [form, setForm] = useState(initialForm)
   const [list, setList] = useState([])
+  const [activeIssueId, setActiveIssueId] = useState(null)
+  const [d3Form, setD3Form] = useState({
+    d3_containment_action_code: '',
+    d3_containment_desc: '',
+    d3_containment_scope: '',
+    d3_containment_owner_emp_id: '',
+    d3_containment_effective_flag: false,
+  })
 
   useEffect(() => {
     try {
@@ -64,6 +72,11 @@ export default function D2IssueForm() {
   const handleChange = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleD3Change = (field) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    setD3Form((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = (e) => {
@@ -86,6 +99,8 @@ export default function D2IssueForm() {
       ng_rate_pct: calcRate(ng, total),
       scrap_rate_pct: calcRate(scrap, total),
       created_at: now.toISOString(),
+      d3_current: null,
+      d3_history: [],
     }
 
     const next = [record, ...list]
@@ -96,6 +111,45 @@ export default function D2IssueForm() {
 
   const ngRate = calcRate(form.ng_qty, form.total_qty)
   const scrapRate = calcRate(form.scrap_qty, form.total_qty)
+
+  const openD3 = (issueId) => {
+    setActiveIssueId(issueId)
+    const target = list.find((x) => x.id === issueId)
+    if (target && target.d3_current) {
+      setD3Form(target.d3_current)
+    } else {
+      setD3Form({
+        d3_containment_action_code: '',
+        d3_containment_desc: '',
+        d3_containment_scope: '',
+        d3_containment_owner_emp_id: '',
+        d3_containment_effective_flag: false,
+      })
+    }
+  }
+
+  const saveD3 = () => {
+    if (!activeIssueId) return
+    const now = new Date()
+    setList((prev) => {
+      const next = prev.map((item) => {
+        if (item.id !== activeIssueId) return item
+        const historyEntry = item.d3_current
+          ? { ...item.d3_current, version_saved_at: now.toISOString() }
+          : null
+        const d3_history = historyEntry
+          ? [historyEntry, ...(item.d3_history || [])]
+          : item.d3_history || []
+        return {
+          ...item,
+          d3_current: { ...d3Form },
+          d3_history,
+        }
+      })
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   return (
     <div className="panel">
@@ -340,6 +394,7 @@ export default function D2IssueForm() {
                   <th>報廢數</th>
                   <th>不良率%</th>
                   <th>報廢率%</th>
+                  <th>D3 臨時對策</th>
                 </tr>
               </thead>
               <tbody>
@@ -359,6 +414,15 @@ export default function D2IssueForm() {
                     <td>{item.scrap_qty}</td>
                     <td>{item.ng_rate_pct}</td>
                     <td>{item.scrap_rate_pct}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => openD3(item.id)}
+                      >
+                        {item.d3_current ? '編輯 D3' : '設定 D3'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -366,6 +430,107 @@ export default function D2IssueForm() {
           </div>
         )}
       </section>
+
+      {activeIssueId && (
+        <section className="panel muted d3-panel">
+          <h3>D3 臨時對策 - {activeIssueId}</h3>
+          <div className="d3-form">
+            <div className="d2-row">
+              <div className="field">
+                <label>臨時對策（代碼）</label>
+                <select
+                  value={d3Form.d3_containment_action_code}
+                  onChange={handleD3Change('d3_containment_action_code')}
+                >
+                  <option value="">請選擇</option>
+                  <option value="STOP_LINE">停線 / 停工</option>
+                  <option value="100P_INSPECTION">100% 檢查</option>
+                  <option value="SORTING">良品 / 不良品分選</option>
+                  <option value="REWORK">重工</option>
+                  <option value="CHANGE_PROCESS_PARAM">調整製程參數</option>
+                  <option value="CHANGE_SUPPLIER">暫時更換供應來源</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>負責人員工編號</label>
+                <input
+                  type="text"
+                  value={d3Form.d3_containment_owner_emp_id}
+                  onChange={handleD3Change('d3_containment_owner_emp_id')}
+                  placeholder="例如：F0005343"
+                />
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field full">
+                <label>適用範圍</label>
+                <input
+                  type="text"
+                  value={d3Form.d3_containment_scope}
+                  onChange={handleD3Change('d3_containment_scope')}
+                  placeholder="例如：JPX One 客戶、XX-36I 機種、D20 當日所有批次"
+                />
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field full">
+                <label>臨時對策說明</label>
+                <textarea
+                  rows={3}
+                  value={d3Form.d3_containment_desc}
+                  onChange={handleD3Change('d3_containment_desc')}
+                  placeholder="簡要說明目前止血作法，例如：增加 100% 外觀檢查，隔離 2/8 日白班生產批次。"
+                />
+              </div>
+            </div>
+
+            <div className="d2-row">
+              <div className="field">
+                <label>目前判斷是否有效</label>
+                <label className="checkbox-inline">
+                  <input
+                    type="checkbox"
+                    checked={d3Form.d3_containment_effective_flag}
+                    onChange={handleD3Change('d3_containment_effective_flag')}
+                  />
+                  止血看起來有效
+                </label>
+              </div>
+            </div>
+
+            <div className="d2-actions">
+              <button type="button" className="btn primary" onClick={saveD3}>
+                儲存 D3 臨時對策（寫入 localStorage）
+              </button>
+            </div>
+          </div>
+
+          <div className="d3-history">
+            <h4>D3 歷史版本</h4>
+            {list.find((x) => x.id === activeIssueId)?.d3_history?.length ? (
+              <ul className="d3-history-list">
+                {list
+                  .find((x) => x.id === activeIssueId)
+                  .d3_history.map((h, idx) => (
+                    <li key={idx}>
+                      <div>
+                        <strong>{h.d3_containment_action_code || '（未填代碼）'}</strong>
+                        <span className="d3-history-meta">
+                          ｜ 儲存時間：{h.version_saved_at}
+                        </span>
+                      </div>
+                      {h.d3_containment_desc && <div>{h.d3_containment_desc}</div>}
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="panel-desc">目前尚無歷史版本，儲存一次 D3 後會保留舊版本。</p>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
